@@ -1,10 +1,9 @@
-package com.example.project;
+package com.example.project.InterfaceImpl;
 
 import com.example.project.Exception.ScoreBoardException;
 import com.example.project.Interface.Match;
 import com.example.project.Interface.ScoreBoard;
-import com.example.project.InterfaceImpl.FootballMatch;
-import com.example.project.InterfaceImpl.WorldCupScoreBoard;
+import com.example.project.Model.Team;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +12,6 @@ import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class WorldCupScoreBoardTest {
 
@@ -54,7 +52,7 @@ public class WorldCupScoreBoardTest {
     }
 
     @Test
-    void shouldUpdateMatchInScoreBoard() {
+    void shouldUpdateMatchScoreInScoreBoard() {
         Team homeTeam = new Team("Mexico");
         Team awayTeam =  new Team("Canada");
         int homeTeamScore = 1;
@@ -72,7 +70,7 @@ public class WorldCupScoreBoardTest {
     }
 
     @Test
-    void shouldNotUpdateMatchWhenMatchIsInactiveInScoreBoard() {
+    void shouldNotUpdateMatchScoreWhenMatchIsInactiveInScoreBoard() {
         Team homeTeam = new Team("Mexico");
         Team awayTeam =  new Team("Canada");
 
@@ -86,7 +84,7 @@ public class WorldCupScoreBoardTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenFinishIsCalledForUnPlayedMatchInScoreBoard() {
+    void shouldThrowExceptionWhenFinishIsCalledForInactiveMatchInScoreBoard() {
         assertThatThrownBy(() -> testScoreBoard.finishMatch())
                 .isInstanceOf(ScoreBoardException.class)
                 .hasMessageContaining("There is no ongoing match to finish");
@@ -104,7 +102,7 @@ public class WorldCupScoreBoardTest {
     }
 
     @Test
-    void shouldReturnMatchesInSortedOrderBasedOnMaximumScoredGoals() {
+    void shouldReturnMatchSummaryOrderedByTotalScoreAndRecency() {
         Team home1 = new Team("Mexico",0);
         Team away1 = new Team("Canada",5);
 
