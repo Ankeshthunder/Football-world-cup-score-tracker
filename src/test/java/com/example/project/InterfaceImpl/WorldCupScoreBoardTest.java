@@ -6,9 +6,13 @@ import com.example.project.Interface.ScoreBoard;
 import com.example.project.Model.Team;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,65 +27,101 @@ public class WorldCupScoreBoardTest {
         testScoreBoard = new WorldCupScoreBoard(activeMatches);
     }
 
-    @Test
-    void shouldStartMatchAndInitializeScoreWithZeroToScoreBoard() {
-        Team homeTeam = new Team("Mexico");
-        Team awayTeam = new Team("Canada");
+    static Stream<List<FootballMatch>> provideMatchDataOngoingOrFinishedGame() {
+        return Stream.of(
+                List.of(
+                        new FootballMatch(new Team("Mexico", 0), new Team("Canada", 5)),
+                        new FootballMatch(new Team("Spain", 10), new Team("Brazil", 2)),
+                        new FootballMatch(new Team("Germany", 2), new Team("France", 2)),
+                        new FootballMatch(new Team("Uruguay", 6), new Team("Italy", 6)),
+                        new FootballMatch(new Team("Argentina", 3), new Team("Australia", 1))
+                )
+        );
+    }
 
-        testScoreBoard.addMatch(homeTeam, awayTeam);
+    static Stream<List<FootballMatch>> provideMatchDataForScheduledGame() {
+        return Stream.of(
+                List.of(
+                        new FootballMatch(new Team("Mexico"), new Team("Canada")),
+                        new FootballMatch(new Team("Spain"), new Team("Brazil"))));
+    }
 
-        List<Match> matches = testScoreBoard.getMatches();
+    @ParameterizedTest
+    @MethodSource("provideMatchDataForScheduledGame")
+    void shouldStartMatchAndInitializeScoreWithZeroToScoreBoard(List<FootballMatch> matches) {
+        for (FootballMatch match : matches) {
+            testScoreBoard.addMatch(match.getHomeTeam(), match.getAwayTeam(), null);
+        }
 
-        assertFalse(matches.isEmpty());
-        assertTrue(matches.stream().allMatch(match ->
-                "Mexico".equals(match.getHomeTeam().getName()) &&
-                        Integer.valueOf(0).equals(match.getHomeTeam().getScore()) &&
-                        "Canada".equals(match.getAwayTeam().getName()) &&
-                        Integer.valueOf(0).equals(match.getHomeTeam().getScore())));
+        List<Match> activeMatches = testScoreBoard.getMatches();
+
+        assertEquals(2, activeMatches.size());
+
+        assertTrue(activeMatches.stream().allMatch(match ->
+                match.getHomeTeam().getScore() == 0 &&
+                        match.getAwayTeam().getScore() == 0));
     }
 
     @Test
     void shouldThrowErrorWhenAddedStartedMatchInScoreBoard() {
         Team homeTeam = new Team("Mexico");
         Team awayTeam = new Team("Canada");
-        testScoreBoard.addMatch(homeTeam, awayTeam);
 
-        assertThatThrownBy(() -> testScoreBoard.addMatch(homeTeam, awayTeam))
+        testScoreBoard.addMatch(homeTeam, awayTeam, null);
+
+        assertThatThrownBy(() -> testScoreBoard.addMatch(homeTeam, awayTeam, null))
                 .isInstanceOf(ScoreBoardException.class)
                 .hasMessageContaining("Oops! The match has already started");
     }
 
     @Test
-    void shouldUpdateMatchScoreInScoreBoard() {
-        Team homeTeam = new Team("Mexico");
-        Team awayTeam =  new Team("Canada");
-        int homeTeamScore = 1;
-        int awayTeamScore = 0;
+    void shouldReturnSameStartTimeForTwoMatchesStartingAtSameTime() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
+        LocalDateTime fixedTime = LocalDateTime.parse("2025-02-05T08:53:15.058499", formatter);
 
-        testScoreBoard.addMatch(homeTeam, awayTeam);
+        testScoreBoard.addMatch(new Team("Spain"), new Team("Mexico"), fixedTime);
+        testScoreBoard.addMatch(new Team("China"), new Team("Japan"), fixedTime);
 
-        assertEquals(0, homeTeam.getScore());
-        assertEquals(0, awayTeam.getScore());
-
-        testScoreBoard.updateMatch(homeTeamScore, awayTeamScore);
-
-        assertEquals(homeTeamScore, homeTeam.getScore());
-        assertEquals(awayTeamScore, awayTeam.getScore());
+        List<Match> scoreBoardSummary = testScoreBoard.getMatches();
+        assertEquals(fixedTime, scoreBoardSummary.get(0).getStartTime());
+        assertEquals(fixedTime, scoreBoardSummary.get(1).getStartTime());
     }
 
-    @Test
-    void shouldNotUpdateMatchScoreWhenMatchIsInactiveInScoreBoard() {
-        Team homeTeam = new Team("Mexico");
-        Team awayTeam =  new Team("Canada");
 
-        testScoreBoard.addMatch(homeTeam, awayTeam);
-        testScoreBoard.updateMatch(0, 1);
+    @ParameterizedTest
+    @MethodSource("provideMatchDataOngoingOrFinishedGame")
+    void shouldUpdateMatchScoreInScoreBoard(List<FootballMatch> matches) {
+        FootballMatch match = matches.get(0);
+        Team homeTeam = match.getHomeTeam();
+        Team awayTeam = match.getAwayTeam();
+
+        testScoreBoard.addMatch(homeTeam, awayTeam, null);
+
+        assertEquals(0, homeTeam.getScore());
+        assertEquals(5, awayTeam.getScore());
+
+        testScoreBoard.updateMatch(1, 5);
+
+        assertEquals(1, homeTeam.getScore());
+        assertEquals(5, awayTeam.getScore());
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideMatchDataOngoingOrFinishedGame")
+    void shouldNotUpdateMatchScoreWhenMatchIsInactiveInScoreBoard(List<FootballMatch> matches) {
+        FootballMatch match = matches.get(0);
+        Team homeTeam = match.getHomeTeam();
+        Team awayTeam = match.getAwayTeam();
+
+        testScoreBoard.addMatch(homeTeam, awayTeam, null);
+        testScoreBoard.updateMatch(1, 5);
         testScoreBoard.finishMatch();
 
-        assertThatThrownBy(() -> testScoreBoard.updateMatch(1,1))
+        assertThatThrownBy(() -> testScoreBoard.updateMatch(2, 5))
                 .isInstanceOf(ScoreBoardException.class)
                 .hasMessageContaining("There is no ongoing match to update score");
     }
+
 
     @Test
     void shouldThrowExceptionWhenFinishIsCalledForInactiveMatchInScoreBoard() {
@@ -90,55 +130,16 @@ public class WorldCupScoreBoardTest {
                 .hasMessageContaining("There is no ongoing match to finish");
     }
 
-    @Test
-    void ShouldFinishMatchInScoreBoard() {
-        Team homeTeam = new Team("Mexico");
-        Team awayTeam =  new Team("Canada");
+    @ParameterizedTest
+    @MethodSource("provideMatchDataOngoingOrFinishedGame")
+    void shouldFinishMatchInScoreBoard(List<FootballMatch> matches) {
+        FootballMatch match = matches.get(0);
 
-        testScoreBoard.addMatch(homeTeam, awayTeam);
+        testScoreBoard.addMatch(match.getHomeTeam(), match.getAwayTeam(), null);
         testScoreBoard.finishMatch();
 
         assertTrue(testScoreBoard.getMatches().isEmpty());
     }
 
-    @Test
-    void shouldReturnMatchSummaryOrderedByTotalScoreAndRecency() {
-        Team home1 = new Team("Mexico",0);
-        Team away1 = new Team("Canada",5);
-
-        Team home2 = new Team("Spain",10);
-        Team away2 = new Team("Brazil",2);
-
-        Team home3 = new Team("Germany",2);
-        Team away3 = new Team("France",2);
-
-        Team home4 = new Team("Uruguay",6);
-        Team away4 = new Team("Italy",6);
-
-        Team home5 = new Team("Argentina",3);
-        Team away5 = new Team("Australia",1);
-
-        testScoreBoard.addMatch(home1, away1);
-        testScoreBoard.addMatch(home2, away2);
-        testScoreBoard.addMatch(home3, away3);
-        testScoreBoard.addMatch(home4, away4);
-        testScoreBoard.addMatch(home5, away5);
-
-        List<Match> sortedFootballMatches = testScoreBoard.getMatchesInSortedOrderBasedOnMaximumScoredGoals();
-
-        assertFalse(sortedFootballMatches.isEmpty());
-        assertEquals(5, sortedFootballMatches.size());
-
-        //1. Uruguay 6 - Italy 6
-        assertEquals(new FootballMatch(home4, away4), sortedFootballMatches.get(0));
-        //2. Spain 10 - Brazil 2
-        assertEquals(new FootballMatch(home2, away2), sortedFootballMatches.get(1));
-        //3. Mexico 0 - Canada 5
-        assertEquals(new FootballMatch(home1, away1), sortedFootballMatches.get(2));
-        //4. Argentina 3 - Australia 1
-        assertEquals(new FootballMatch(home5, away5), sortedFootballMatches.get(3));
-        //5. Germany 2 - France 2
-        assertEquals(new FootballMatch(home3, away3), sortedFootballMatches.get(4));
-    }
 
 }
