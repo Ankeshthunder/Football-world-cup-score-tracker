@@ -115,7 +115,7 @@ public class WorldCupScoreBoardTest {
 
         testScoreBoard.addMatch(homeTeam, awayTeam, null);
         testScoreBoard.updateMatch(1, 5);
-        testScoreBoard.finishMatch();
+        testScoreBoard.finishMatch(homeTeam.getName(), awayTeam.getName());
 
         assertThatThrownBy(() -> testScoreBoard.updateMatch(2, 5))
                 .isInstanceOf(ScoreBoardException.class)
@@ -125,21 +125,41 @@ public class WorldCupScoreBoardTest {
 
     @Test
     void shouldThrowExceptionWhenFinishIsCalledForInactiveMatchInScoreBoard() {
-        assertThatThrownBy(() -> testScoreBoard.finishMatch())
+        assertThatThrownBy(() -> testScoreBoard.finishMatch("HomeTeam","AwayTeam"))
                 .isInstanceOf(ScoreBoardException.class)
-                .hasMessageContaining("There is no ongoing match to finish");
+                .hasMessageContaining("No ongoing match found with the given teams");
     }
 
     @ParameterizedTest
     @MethodSource("provideMatchDataOngoingOrFinishedGame")
-    void shouldFinishMatchInScoreBoard(List<FootballMatch> matches) {
-        FootballMatch match = matches.get(0);
+    void shouldFinishOngoingMatch(List<FootballMatch> matches) {
+        Team homeTeam1 = matches.get(0).getHomeTeam();
+        Team awayTeam1 = matches.get(0).getAwayTeam();
+        Team homeTeam2 = matches.get(1).getHomeTeam();
+        Team awayTeam2 = matches.get(1).getAwayTeam();
+        testScoreBoard.addMatch(homeTeam1,awayTeam1, null);
+        testScoreBoard.addMatch(homeTeam2,awayTeam2,null);
 
-        testScoreBoard.addMatch(match.getHomeTeam(), match.getAwayTeam(), null);
-        testScoreBoard.finishMatch();
+        // Ensure matches are active
+        assertEquals(2, testScoreBoard.getMatches().size());
 
-        assertTrue(testScoreBoard.getMatches().isEmpty());
+        // When: Finishing the match between homeTeam1 and awayTeam1
+        testScoreBoard.finishMatch(homeTeam1.getName(), awayTeam1.getName());
+
+        // Then: The match list should only contain one match (Uruguay vs Japan)
+        List<Match> remainingMatches = testScoreBoard.getMatches();
+        assertEquals(1, remainingMatches.size());
+        assertEquals(homeTeam2.getName(), remainingMatches.get(0).getHomeTeam().getName());
     }
 
+    @Test
+    void shouldIgnoreCaseWhenFindingMatchForFinish() {
+        //A match with mixed-case names
+        testScoreBoard.addMatch(new Team("England"),new Team("Portugal"), LocalDateTime.now());
 
+        //Finishing the match with different casing
+        testScoreBoard.finishMatch("ENGLAND", "portugal");
+
+        assertEquals(0, testScoreBoard.getMatches().size());
+    }
 }
