@@ -73,6 +73,7 @@ Assumptions :
      5. All the test cases are following AAA pattern which means first arrange data, then act on method and then assert result.
      6. Two different matches can be start on same time.
      7. No two match can exist between same home and away team.
+     8. Scoreboard Summary will be sorted by score (descending), start time (descending), and maintain original order of insertion if both are the same.
   
 Authors:
 
