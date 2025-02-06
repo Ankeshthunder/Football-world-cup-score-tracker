@@ -1,6 +1,7 @@
 package com.example.project.InterfaceImpl;
 
 import com.example.project.Exception.ScoreBoardException;
+import com.example.project.Exception.ScoreException;
 import com.example.project.Interface.Match;
 import com.example.project.Interface.ScoreBoard;
 import com.example.project.Model.Team;
@@ -91,19 +92,20 @@ public class WorldCupScoreBoardTest {
     @ParameterizedTest
     @MethodSource("provideMatchDataOngoingOrFinishedGame")
     void shouldUpdateMatchScoreInScoreBoard(List<FootballMatch> matches) {
-        FootballMatch match = matches.get(0);
-        Team homeTeam = match.getHomeTeam();
-        Team awayTeam = match.getAwayTeam();
+        FootballMatch match1= matches.get(0);
+        FootballMatch match2 = matches.get(1);
+        Team homeTeam1 = match1.getHomeTeam();
+        Team awayTeam1 = match1.getAwayTeam();
+        Team homeTeam2 = match2.getHomeTeam();
+        Team awayTeam2 = match2.getAwayTeam();
 
-        testScoreBoard.addMatch(homeTeam, awayTeam, null);
+        testScoreBoard.addMatch(homeTeam1, awayTeam1, null);
+        testScoreBoard.addMatch(homeTeam2, awayTeam2, null);
 
-        assertEquals(0, homeTeam.getScore());
-        assertEquals(5, awayTeam.getScore());
+        testScoreBoard.updateMatch(1, 5, homeTeam1.getName(), awayTeam1.getName());
 
-        testScoreBoard.updateMatch(1, 5);
-
-        assertEquals(1, homeTeam.getScore());
-        assertEquals(5, awayTeam.getScore());
+        assertEquals(1, homeTeam1.getScore());
+        assertEquals(5, awayTeam1.getScore());
     }
 
     @ParameterizedTest
@@ -114,12 +116,36 @@ public class WorldCupScoreBoardTest {
         Team awayTeam = match.getAwayTeam();
 
         testScoreBoard.addMatch(homeTeam, awayTeam, null);
-        testScoreBoard.updateMatch(1, 5);
         testScoreBoard.finishMatch(homeTeam.getName(), awayTeam.getName());
 
-        assertThatThrownBy(() -> testScoreBoard.updateMatch(2, 5))
+        assertThatThrownBy(() -> testScoreBoard.updateMatch(1, 5, homeTeam.getName(), awayTeam.getName()))
                 .isInstanceOf(ScoreBoardException.class)
                 .hasMessageContaining("There is no ongoing match to update score");
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideMatchDataOngoingOrFinishedGame")
+    void shouldNotUpdateScoreWhenUpdatedWithExcessiveIncrement(List<FootballMatch> matches) {
+        FootballMatch match = matches.get(0);
+        Team homeTeam = match.getHomeTeam();
+        Team awayTeam = match.getAwayTeam();
+
+        testScoreBoard.addMatch(homeTeam, awayTeam, null);
+
+        assertThatThrownBy(() -> testScoreBoard.updateMatch(2, 5, homeTeam.getName(), awayTeam.getName()))
+                .isInstanceOf(ScoreException.class)
+                .hasMessageContaining("Score should not be greater by more than one than previous score");
+    }
+
+    @Test
+    void shouldIgnoreCaseWhenFindingMatchForUpdate() {
+        //A match with mixed-case names
+        testScoreBoard.addMatch(new Team("England"),new Team("Portugal"), LocalDateTime.now());
+
+        //Updating the match with different casing
+        testScoreBoard.updateMatch(1,0,"ENGLAND", "portugal");
+
+        assertEquals(1, testScoreBoard.getMatches().get(0).getScore());
     }
 
 
