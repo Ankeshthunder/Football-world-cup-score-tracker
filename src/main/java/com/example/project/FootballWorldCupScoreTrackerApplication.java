@@ -23,13 +23,13 @@ public class FootballWorldCupScoreTrackerApplication {
 
 	public static void main(String[] args) {
 
-		List<Team> teams = new ArrayList<>(Arrays.asList(
+		// Encapsulated team list (Immutable Copy)
+		List<Team> teams = List.of(
 				new Team("Mexico", 0), new Team("Canada", 5),
 				new Team("Spain"), new Team("Brazil"),
-    			new Team("Germany"), new Team("France")));
+    			new Team("Germany"), new Team("France"));
 
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
-		LocalDateTime localDateTime = LocalDateTime.parse("2025-02-05T08:53:15.058499", formatter);
+		LocalDateTime localDateTime = LocalDateTime.now();
 
 		WorldCupScoreBoard worldCupScoreBoard = new WorldCupScoreBoard(new ArrayList<>());
 
@@ -48,22 +48,23 @@ public class FootballWorldCupScoreTrackerApplication {
 		// finishing second match
         worldCupScoreBoard.finishMatch(teams.get(2).getName(), teams.get(3).getName());
 
-		//fetching list of all ongoing matches
-		worldCupScoreBoard.getMatches().forEach(match -> logger.info(
-				String.format("%s - %s (%d - %d)", match.getHomeTeam().getName(),
-						match.getAwayTeam().getName(),
-						match.getHomeTeam().getScore(),
-						match.getAwayTeam().getScore())));
+		//fetch list of all ongoing matches
+		worldCupScoreBoard.getMatches().forEach(match -> logger.info(formatMatch(match)));
 
-
+		// Fetch and log sorted scoreboard summary
 		worldCupScoreBoardSummary.getBoardSummaryInSortedOrderBasedOnMaximumScoredGoalsAndRecency()
-				.forEach(match -> logger.info(
-				String.format("%s - %s (%d - %d)", match.getHomeTeam().getName(),
-						match.getAwayTeam().getName(),
-						match.getHomeTeam().getScore(),
-						match.getAwayTeam().getScore())));
+				.forEach(match -> logger.info(formatMatch(match)));
+
 
 		SpringApplication.run(FootballWorldCupScoreTrackerApplication.class, args);
+	}
+
+	private static String formatMatch(Match match) {
+		return String.format("%s - %s (%d - %d)",
+				match.getHomeTeam().getName(),
+				match.getAwayTeam().getName(),
+				match.getHomeTeam().getScore(),
+				match.getAwayTeam().getScore());
 	}
 
 }
